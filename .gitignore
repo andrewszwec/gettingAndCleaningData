@@ -1,0 +1,2 @@
+# Can ignore specific files
+UCI\ HAR\ Dataset/**/*
