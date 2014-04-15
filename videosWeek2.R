@@ -116,4 +116,50 @@ json2
 
 ## Video 5 :: Reading from other sources
 
+file()
+url()
+gzfile()
+bzfile()
+?conectinos
+foriegn() package
+	reaad.arff (Weka)
+	read.dta (strata)
+	read.mtp (minitab)
+	read.octave 
+	read.spss
+	read.xport (SAS)
+	
+RPostgresSQL()
+RODBC -> POstgreSQL, MySQL, SQLite()
+RMongo()
+
+jpeg()
+readbitmap()
+png()
+EBImage() (bioconductor)
+
+## GIS DATA
+rdgal()
+rgeos()
+raster()
+
+#REding Music
+tuneR()
+seewave()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
