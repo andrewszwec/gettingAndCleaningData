@@ -41,9 +41,11 @@ sqldf('select pwgtp1, pwgtp2, pwgtp3 from acs where AGEP<50')
 
 ## Question 4
 
+# Method 1
 library(XML)
 url <- "http://biostat.jhsph.edu/~jleek/contact.html"
 html <- htmlTreeParse(url, useInternalNodes=T)
+readLines(html)
 
 mylines <- strsplit(as(html,"character"),"\n")
 output <- unlist(mylines[[1]])
@@ -60,7 +62,14 @@ ooo <- lapply(oo, function(x){ paste("|",nchar(x),x, sep="|") })
 unlist(ooo)
 
 
-xpathSApply(html,"//title", xmlValue)
+# Method 2
+url <- "http://biostat.jhsph.edu/~jleek/contact.html"
+library(httr); 
+html2 = GET(url)
+content2 = content(html2, as="text")
+parsedHtml = htmlParse(content2, asText=TRUE)
+typeof(parsedHtml)
+
 
 
 # "<link rel=\"stylesheet\" href=\"images/PixelGreen.css" type="text/css">"
