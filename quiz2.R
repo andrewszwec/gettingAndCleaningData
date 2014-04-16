@@ -31,54 +31,25 @@ json2
 
 
 ## Question 2
-
+## Connect to the interwebs and get some data
 library(sqldf)
-library(data.table)
-acs <- fread("./getdata-data-ss06pid.csv")
+acs <- read.csv("./data/getdata-data-ss06pid.csv")
 names(acs)
-sqldf('select pwgtp1, pwgtp2, pwgtp3 from acs where AGEP<50')
+sqldf('select pwgtp1, pwgtp2, pwgtp3 from acs where AGEP<50 limit 10')
 
 
 ## Question 4
 
-# Method 1
-library(XML)
-url <- "http://biostat.jhsph.edu/~jleek/contact.html"
-html <- htmlTreeParse(url, useInternalNodes=T)
-readLines(html)
-
-mylines <- strsplit(as(html,"character"),"\n")
-output <- unlist(mylines[[1]])
-output[10]
-output[20]
-output[30]
-output[100]
-
-o <- gsub("\t","",output)
-# returns string w/o leading or trailing whitespace
-oo <- lapply(o, function (x) gsub("^\\s+|\\s+$", "", x))
-ooo <- lapply(oo, function(x){ paste("|",nchar(x),x, sep="|") })
-
-unlist(ooo)
+con = url("http://biostat.jhsph.edu/~jleek/contact.html")
+htmlCode = readLines(con)
+close(con)
+nchar(htmlCode[10])
+nchar(htmlCode[20])
+nchar(htmlCode[30])
+nchar(htmlCode[100])
 
 
-# Method 2
-url <- "http://biostat.jhsph.edu/~jleek/contact.html"
-library(httr); 
-html2 = GET(url)
-content2 = content(html2, as="text")
-parsedHtml = htmlParse(content2, asText=TRUE)
-typeof(parsedHtml)
-
-
-
-# "<link rel=\"stylesheet\" href=\"images/PixelGreen.css" type="text/css">"
-#       
-# ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-# 
-# <div id="header"><div id="header-content">
-# 
-
+# 45, 31, 7, 25
 
 
 ## Question 5
