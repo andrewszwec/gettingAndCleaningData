@@ -15,6 +15,7 @@
 
 ## Load Libraries
 library(sqldf)
+library(data.table)
 
 ################################################################################################
 ##    Read in reference data from files and add column names
@@ -29,8 +30,8 @@ names(activities) <- c("id","activityDesc")
 ##    Read in Test data from files and add column names
 ################################################################################################
 ttS <- data.frame(read.table("./UCI HAR Dataset/test/subject_test.txt", header=FALSE))
-ttX <- data.frame(read.table("./UCI HAR Dataset/test/X_test.txt", header=FALSE))
-ttY <- data.frame(read.table("./UCI HAR Dataset/test/Y_test.txt", header=FALSE))
+ttX <- data.frame(read.table("./UCI HAR Dataset/test/X_test.txt", header=FALSE, colClasses="numeric"))
+ttY <- data.frame(read.table("./UCI HAR Dataset/test/Y_test.txt", header=FALSE, colClasses="numeric"))
 
 names(ttS) <- "Subjects"
 names(ttX) <- features$name
@@ -60,8 +61,8 @@ rm(ttS, ttX, ttY,actDesc)
 ##    Read in Training data from files and add column names
 ################################################################################################
 tnS <- data.frame(read.table("./UCI HAR Dataset/train/subject_train.txt", header=FALSE))
-tnX <- data.frame(read.table("./UCI HAR Dataset/train/X_train.txt", header=FALSE))
-tnY <- data.frame(read.table("./UCI HAR Dataset/train/Y_train.txt", header=FALSE))
+tnX <- data.frame(read.table("./UCI HAR Dataset/train/X_train.txt", header=FALSE, colClasses="numeric"))
+tnY <- data.frame(read.table("./UCI HAR Dataset/train/Y_train.txt", header=FALSE, colClasses="numeric"))
 
 names(tnS) <- "Subjects"
 names(tnX) <- features$name
@@ -128,11 +129,135 @@ write.csv(tidyData, file="tidyData.csv", row.names=FALSE)
 
 ## Try colMeans and rowMeans etc...
 ## averages <- tapply(completeCases$count,completeCases$ID,sum)
-## Data is in string not numeric() fix this!!
+## Group the data set by activity then subject. As you group aggregate numerics by mean()
 
-mean(as.numeric(tidyData['tBodyAcc-std()-X'])
 
-## Good idea, but need to remove NA's
-sqldf("select 'id',  'Subjects', 'activityDesc', avg('tBodyAcc-std()-X'), avg('tBodyAcc-std()-Y'), avg('tBodyAcc-std()-Z'), avg('tGravityAcc-std()-X'), avg('tGravityAcc-std()-Y'), avg('tGravityAcc-std()-Z'), avg('tBodyAccJerk-std()-X'), avg('tBodyAccJerk-std()-Y'), avg('tBodyAccJerk-std()-Z'), avg('tBodyGyro-std()-X'), avg('tBodyGyro-std()-Y'), avg('tBodyGyro-std()-Z'), avg('tBodyGyroJerk-std()-X'), avg('tBodyGyroJerk-std()-Y'), avg('tBodyGyroJerk-std()-Z'), avg('tBodyAccMag-std()'), avg('tGravityAccMag-std()'), avg('tBodyAccJerkMag-std()'), avg('tBodyGyroMag-std()'), avg('tBodyGyroJerkMag-std()'), avg('fBodyAcc-std()-X'), avg('fBodyAcc-std()-Y'), avg('fBodyAcc-std()-Z'), avg('fBodyAccJerk-std()-X'), avg('fBodyAccJerk-std()-Y'), avg('fBodyAccJerk-std()-Z'), avg('fBodyGyro-std()-X'), avg('fBodyGyro-std()-Y'), avg('fBodyGyro-std()-Z'), avg('fBodyAccMag-std()'), avg('fBodyBodyAccJerkMag-std()'), avg('fBodyBodyGyroMag-std()'), avg('fBodyBodyGyroJerkMag-std()'), avg('tBodyAcc-mean()-X'), avg('tBodyAcc-mean()-Y'), avg('tBodyAcc-mean()-Z'), avg('tGravityAcc-mean()-X'), avg('tGravityAcc-mean()-Y'), avg('tGravityAcc-mean()-Z'), avg('tBodyAccJerk-mean()-X'), avg('tBodyAccJerk-mean()-Y'), avg('tBodyAccJerk-mean()-Z'), avg('tBodyGyro-mean()-X'), avg('tBodyGyro-mean()-Y'), avg('tBodyGyro-mean()-Z'), avg('tBodyGyroJerk-mean()-X'), avg('tBodyGyroJerk-mean()-Y'), avg('tBodyGyroJerk-mean()-Z'), avg('tBodyAccMag-mean()'), avg('tGravityAccMag-mean()'), avg('tBodyAccJerkMag-mean()'), avg('tBodyGyroMag-mean()'), avg('tBodyGyroJerkMag-mean()'), avg('fBodyAcc-mean()-X'), avg('fBodyAcc-mean()-Y'), avg('fBodyAcc-mean()-Z'), avg('fBodyAcc-meanFreq()-X'), avg('fBodyAcc-meanFreq()-Y'), avg('fBodyAcc-meanFreq()-Z'), avg('fBodyAccJerk-mean()-X'), avg('fBodyAccJerk-mean()-Y'), avg('fBodyAccJerk-mean()-Z'), avg('fBodyAccJerk-meanFreq()-X'), avg('fBodyAccJerk-meanFreq()-Y'), avg('fBodyAccJerk-meanFreq()-Z'), avg('fBodyGyro-mean()-X'), avg('fBodyGyro-mean()-Y'), avg('fBodyGyro-mean()-Z'), avg('fBodyGyro-meanFreq()-X'), avg('fBodyGyro-meanFreq()-Y'), avg('fBodyGyro-meanFreq()-Z'), avg('fBodyAccMag-mean()'), avg('fBodyAccMag-meanFreq()'), avg('fBodyBodyAccJerkMag-mean()'), avg('fBodyBodyAccJerkMag-meanFreq()'), avg('fBodyBodyGyroMag-mean()'), avg('fBodyBodyGyroMag-meanFreq()'), avg('fBodyBodyGyroJerkMag-mean()'), avg('fBodyBodyGyroJerkMag-meanFreq()'), avg('angle(tBodyAccMeangravity)'), avg('angle(tBodyAccJerkMean)gravityMean)'), avg('angle(tBodyGyroMeangravityMean)'), avg('angle(tBodyGyroJerkMeangravityMean)'), avg('angle(XgravityMean)'), avg('angle(YgravityMean)'), avg('angle(ZgravityMean)') from tidyData group by 'Subjects', 'activityDesc'")
+dt <- as.data.table(tidyData)
+dt[, list(Mean = colMeans( dt[,list( tBodyAccstdX)] )), by=list(activityDesc,Subjects)]
 
-write.csv(  ,file="averages.csv", row.names=FALSE)
+## Remove '-' and '()' from names in data table so they can be accessed
+names(dt) <- gsub("[-|(|)|,]", "", names(dt), ignore.case=TRUE)
+
+
+
+## This is best so far!! Requires group by 2 cols
+#sapply(split(tidyData[4:ncol(tidyData)],list(tidyData$activityDesc, tidyData$Subjects) )[[1]],mean, na.rm=TRUE)
+## Good but wrong pivot: tapply(tidyData["tBodyAcc-std()-X"][[1]], tidyData$activityDesc ,mean, na.rm=TRUE)[1:2]
+#by(tidyData["tBodyAcc-std()-X"][[1]], tidyData$activityDesc, mean, na.rm=TRUE)
+
+
+
+## This does exactly what we want but needs replicating to do it for all cols
+
+a1 <- sqldf("select activityDesc, Subjects, avg(tBodyAccstdX) from dt where tBodyAccstdX is not null group by activityDesc, Subjects;")
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyAccstdY) from dt where tBodyAccstdY is not null group by activityDesc, Subjects;"))
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyAccstdZ) from dt where tBodyAccstdZ is not null group by activityDesc, Subjects;"))
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tGravityAccstdX) from dt where tGravityAccstdX is not null group by activityDesc, Subjects;"))
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tGravityAccstdY) from dt where tGravityAccstdY is not null group by activityDesc, Subjects;"))
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tGravityAccstdZ) from dt where tGravityAccstdZ is not null group by activityDesc, Subjects;"))
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyAccJerkstdX) from dt where tBodyAccJerkstdX is not null group by activityDesc, Subjects;"))
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyAccJerkstdY) from dt where tBodyAccJerkstdY is not null group by activityDesc, Subjects;"))
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyAccJerkstdZ) from dt where tBodyAccJerkstdZ is not null group by activityDesc, Subjects;"))
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyGyrostdX) from dt where tBodyGyrostdX is not null group by activityDesc, Subjects;"))
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyGyrostdY) from dt where tBodyGyrostdY is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyGyrostdZ) from dt where tBodyGyrostdZ is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyGyroJerkstdX) from dt where tBodyGyroJerkstdX is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyGyroJerkstdY) from dt where tBodyGyroJerkstdY is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyGyroJerkstdZ) from dt where tBodyGyroJerkstdZ is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyAccMagstd) from dt where tBodyAccMagstd is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tGravityAccMagstd) from dt where tGravityAccMagstd is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyAccJerkMagstd) from dt where tBodyAccJerkMagstd is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyGyroMagstd) from dt where tBodyGyroMagstd is not null group by activityDesc, Subjects;")) ) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyGyroJerkMagstd) from dt where tBodyGyroJerkMagstd is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyAccstdX) from dt where fBodyAccstdX is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyAccstdY) from dt where fBodyAccstdY is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyAccstdZ) from dt where fBodyAccstdZ is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyAccJerkstdX) from dt where fBodyAccJerkstdX is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyAccJerkstdY) from dt where fBodyAccJerkstdY is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyAccJerkstdZ) from dt where fBodyAccJerkstdZ is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyGyrostdX) from dt where fBodyGyrostdX is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyGyrostdY) from dt where fBodyGyrostdY is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyGyrostdZ) from dt where fBodyGyrostdZ is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyAccMagstd) from dt where fBodyAccMagstd is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyBodyAccJerkMagstd) from dt where fBodyBodyAccJerkMagstd is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyBodyGyroMagstd) from dt where fBodyBodyGyroMagstd is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyBodyGyroJerkMagstd) from dt where fBodyBodyGyroJerkMagstd is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyAccmeanX) from dt where tBodyAccmeanX is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyAccmeanY) from dt where tBodyAccmeanY is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyAccmeanZ) from dt where tBodyAccmeanZ is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tGravityAccmeanX) from dt where tGravityAccmeanX is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tGravityAccmeanY) from dt where tGravityAccmeanY is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tGravityAccmeanZ) from dt where tGravityAccmeanZ is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyAccJerkmeanX) from dt where tBodyAccJerkmeanX is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyAccJerkmeanY) from dt where tBodyAccJerkmeanY is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyAccJerkmeanZ) from dt where tBodyAccJerkmeanZ is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyGyromeanX) from dt where tBodyGyromeanX is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyGyromeanY) from dt where tBodyGyromeanY is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyGyromeanZ) from dt where tBodyGyromeanZ is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyGyroJerkmeanX) from dt where tBodyGyroJerkmeanX is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyGyroJerkmeanY) from dt where tBodyGyroJerkmeanY is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyGyroJerkmeanZ) from dt where tBodyGyroJerkmeanZ is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyAccMagmean) from dt where tBodyAccMagmean is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tGravityAccMagmean) from dt where tGravityAccMagmean is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyAccJerkMagmean) from dt where tBodyAccJerkMagmean is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyGyroMagmean) from dt where tBodyGyroMagmean is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyGyroJerkMagmean) from dt where tBodyGyroJerkMagmean is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyAccmeanX) from dt where fBodyAccmeanX is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyAccmeanY) from dt where fBodyAccmeanY is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyAccmeanZ) from dt where fBodyAccmeanZ is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyAccmeanFreqX) from dt where fBodyAccmeanFreqX is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyAccmeanFreqY) from dt where fBodyAccmeanFreqY is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyAccmeanFreqZ) from dt where fBodyAccmeanFreqZ is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyAccJerkmeanX) from dt where fBodyAccJerkmeanX is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyAccJerkmeanY) from dt where fBodyAccJerkmeanY is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyAccJerkmeanZ) from dt where fBodyAccJerkmeanZ is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyAccJerkmeanFreqX) from dt where fBodyAccJerkmeanFreqX is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyAccJerkmeanFreqY) from dt where fBodyAccJerkmeanFreqY is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyAccJerkmeanFreqZ) from dt where fBodyAccJerkmeanFreqZ is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyGyromeanX) from dt where fBodyGyromeanX is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyGyromeanY) from dt where fBodyGyromeanY is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyGyromeanZ) from dt where fBodyGyromeanZ is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyGyromeanFreqX) from dt where fBodyGyromeanFreqX is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyGyromeanFreqY) from dt where fBodyGyromeanFreqY is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyGyromeanFreqZ) from dt where fBodyGyromeanFreqZ is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyAccMagmean) from dt where fBodyAccMagmean is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyAccMagmeanFreq) from dt where fBodyAccMagmeanFreq is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyBodyAccJerkMagmean) from dt where fBodyBodyAccJerkMagmean is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyBodyAccJerkMagmeanFreq) from dt where fBodyBodyAccJerkMagmeanFreq is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyBodyGyroMagmean) from dt where fBodyBodyGyroMagmean is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyBodyGyroMagmeanFreq) from dt where fBodyBodyGyroMagmeanFreq is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyBodyGyroJerkMagmean) from dt where fBodyBodyGyroJerkMagmean is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(fBodyBodyGyroJerkMagmeanFreq) from dt where fBodyBodyGyroJerkMagmeanFreq is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(angletBodyAccMeangravity) from dt where angletBodyAccMeangravity is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(angletBodyAccJerkMeangravityMean) from dt where angletBodyAccJerkMeangravityMean is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(angletBodyGyroMeangravityMean) from dt where angletBodyGyroMeangravityMean is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(angletBodyGyroJerkMeangravityMean) from dt where angletBodyGyroJerkMeangravityMean is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(angleXgravityMean) from dt where angleXgravityMean is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(angleYgravityMean) from dt where angleYgravityMean is not null group by activityDesc, Subjects;")) 
+a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(angleZgravityMean) from dt where angleZgravityMean is not null group by activityDesc, Subjects;")) 
+
+
+write.csv( a1 ,file="averages.csv", row.names=FALSE)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
