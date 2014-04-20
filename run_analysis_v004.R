@@ -117,7 +117,7 @@ getCols <- rbind(colStd, colMean)
 #########################################################################################################################
 ##    Create Tidy Dataset
 #########################################################################################################################
-## getCols contains the required cols for our tidy dataset. List them here to select them from our data frame called data
+
 tidyData <- subset(data, select=c("id","Subjects","activityDesc","tBodyAcc-std()-X", "tBodyAcc-std()-Y", "tBodyAcc-std()-Z", "tGravityAcc-std()-X", "tGravityAcc-std()-Y", "tGravityAcc-std()-Z", "tBodyAccJerk-std()-X", "tBodyAccJerk-std()-Y", "tBodyAccJerk-std()-Z", "tBodyGyro-std()-X", "tBodyGyro-std()-Y", "tBodyGyro-std()-Z", "tBodyGyroJerk-std()-X", "tBodyGyroJerk-std()-Y", "tBodyGyroJerk-std()-Z", "tBodyAccMag-std()", "tGravityAccMag-std()", "tBodyAccJerkMag-std()", "tBodyGyroMag-std()", "tBodyGyroJerkMag-std()", "fBodyAcc-std()-X", "fBodyAcc-std()-Y", "fBodyAcc-std()-Z", "fBodyAccJerk-std()-X", "fBodyAccJerk-std()-Y", "fBodyAccJerk-std()-Z", "fBodyGyro-std()-X", "fBodyGyro-std()-Y", "fBodyGyro-std()-Z", "fBodyAccMag-std()", "fBodyBodyAccJerkMag-std()", "fBodyBodyGyroMag-std()", "fBodyBodyGyroJerkMag-std()", "tBodyAcc-mean()-X", "tBodyAcc-mean()-Y", "tBodyAcc-mean()-Z", "tGravityAcc-mean()-X", "tGravityAcc-mean()-Y", "tGravityAcc-mean()-Z", "tBodyAccJerk-mean()-X", "tBodyAccJerk-mean()-Y", "tBodyAccJerk-mean()-Z", "tBodyGyro-mean()-X", "tBodyGyro-mean()-Y", "tBodyGyro-mean()-Z", "tBodyGyroJerk-mean()-X", "tBodyGyroJerk-mean()-Y", "tBodyGyroJerk-mean()-Z", "tBodyAccMag-mean()", "tGravityAccMag-mean()", "tBodyAccJerkMag-mean()", "tBodyGyroMag-mean()", "tBodyGyroJerkMag-mean()", "fBodyAcc-mean()-X", "fBodyAcc-mean()-Y", "fBodyAcc-mean()-Z", "fBodyAcc-meanFreq()-X", "fBodyAcc-meanFreq()-Y", "fBodyAcc-meanFreq()-Z", "fBodyAccJerk-mean()-X", "fBodyAccJerk-mean()-Y", "fBodyAccJerk-mean()-Z", "fBodyAccJerk-meanFreq()-X", "fBodyAccJerk-meanFreq()-Y", "fBodyAccJerk-meanFreq()-Z", "fBodyGyro-mean()-X", "fBodyGyro-mean()-Y", "fBodyGyro-mean()-Z", "fBodyGyro-meanFreq()-X", "fBodyGyro-meanFreq()-Y", "fBodyGyro-meanFreq()-Z", "fBodyAccMag-mean()", "fBodyAccMag-meanFreq()", "fBodyBodyAccJerkMag-mean()", "fBodyBodyAccJerkMag-meanFreq()", "fBodyBodyGyroMag-mean()", "fBodyBodyGyroMag-meanFreq()", "fBodyBodyGyroJerkMag-mean()", "fBodyBodyGyroJerkMag-meanFreq()", "angle(tBodyAccMean,gravity)", "angle(tBodyAccJerkMean),gravityMean)", "angle(tBodyGyroMean,gravityMean)", "angle(tBodyGyroJerkMean,gravityMean)", "angle(X,gravityMean)", "angle(Y,gravityMean)", "angle(Z,gravityMean)" ))
 
 write.csv(tidyData, file="tidyData.csv", row.names=FALSE)
@@ -126,17 +126,32 @@ write.csv(tidyData, file="tidyData.csv", row.names=FALSE)
 ##    Create second, independant dataset with averages of each variable for each activity 
 ##    and each subject. Export as "averages.csv".
 #########################################################################################################################
-## Create data.table called dt (data table is faster for aggregations and merges)
+
+## Try colMeans and rowMeans etc...
+## averages <- tapply(completeCases$count,completeCases$ID,sum)
+## Group the data set by activity then subject. As you group aggregate numerics by mean()
+
+
 dt <- as.data.table(tidyData)
 dt[, list(Mean = colMeans( dt[,list( tBodyAccstdX)] )), by=list(activityDesc,Subjects)]
 
 ## Clear up some memory
-rm(tidyData, activities, colMean, colStd, data, features, getCols, mycols, tn, tt)
+rm(tidyData)
 
 ## Remove '-' and '()' from names in data table so they can be accessed
 names(dt) <- gsub("[-|(|)|,]", "", names(dt), ignore.case=TRUE)
 
-## Group by Activities and Subjects and calculate the mean for each column of mean and standard deviation measurements
+
+
+## This is best so far!! Requires group by 2 cols
+#sapply(split(tidyData[4:ncol(tidyData)],list(tidyData$activityDesc, tidyData$Subjects) )[[1]],mean, na.rm=TRUE)
+## Good but wrong pivot: tapply(tidyData["tBodyAcc-std()-X"][[1]], tidyData$activityDesc ,mean, na.rm=TRUE)[1:2]
+#by(tidyData["tBodyAcc-std()-X"][[1]], tidyData$activityDesc, mean, na.rm=TRUE)
+
+
+
+## This does exactly what we want but needs replicating to do it for all cols
+
 a1 <- sqldf("select activityDesc, Subjects, avg(tBodyAccstdX) from dt where tBodyAccstdX is not null group by activityDesc, Subjects;")
 a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyAccstdY) from dt where tBodyAccstdY is not null group by activityDesc, Subjects;"))
 a1 <- merge(a1, sqldf("select activityDesc, Subjects, avg(tBodyAccstdZ) from dt where tBodyAccstdZ is not null group by activityDesc, Subjects;"))
@@ -232,7 +247,6 @@ rm(a1)
 ## Order data by Activity then by Subjects
 ordered <- o[order(activityDesc, Subjects),  ]
 
-## Clear up some memory
 rm(o)
 
 write.csv( ordered ,file="averages.csv", row.names=FALSE)
